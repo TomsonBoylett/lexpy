@@ -13,7 +13,7 @@ class DAWG(FSA):
     def __init__(self):
         root = FSANode(1, '')
         super(DAWG, self).__init__(root=root)
-        self.__prev_word = ''
+        self.__prev_word = []
         self.__prev_node = root
         self.__minimized_nodes = {}
         self.__unchecked_nodes = deque()
@@ -71,7 +71,7 @@ class DAWG(FSA):
             self.__unchecked_nodes.pop()
 
     def add_all(self, source):
-        if isinstance(source, (list, set, tuple)):
+        if isinstance(source, list):
             source = sorted(source)
         FSA.add_all(self, source)
 

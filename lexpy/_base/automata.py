@@ -1,10 +1,10 @@
 import os
+import re
 
 from types import GeneratorType
 
 from lexpy._utils import validate_expression, gen_source
 from lexpy.exceptions import InvalidWildCardExpressionError
-
 
 class FSA:
     """
@@ -13,6 +13,8 @@ class FSA:
     """
 
     __slots__ = '_id', '_num_of_words', 'root'
+
+    letter_regex = re.compile(r'(QU|[A-Z])', re.IGNORECASE)
 
     def __init__(self, root):
         self._id = 1
@@ -30,7 +32,7 @@ class FSA:
         Returns:
             :returns contains (boolean) True or False
         """
-        if word == '':
+        if word == []:
             return True  # The root is an empty string. So it is always present
         if word is None:
             return False
@@ -58,7 +60,7 @@ class FSA:
             returns (False, None)
 
         """
-        if prefix == '':
+        if prefix == []:
             return True, self.root
         if prefix is None:
             return False, None
@@ -87,7 +89,7 @@ class FSA:
 
 
     @staticmethod
-    def __words_with_wildcard(node, wildcard, index, current_word="", with_count=False):
+    def __words_with_wildcard(node, wildcard, index, current_word=[], with_count=False):
         """
         Description:
             Returns all the words where the wildcard pattern matches.
@@ -125,7 +127,7 @@ class FSA:
                 child_words = FSA.__words_with_wildcard(child_node,
                                                         wildcard,
                                                         index + 1,
-                                                        current_word + child,
+                                                        current_word + [child],
                                                         with_count=with_count)
                 words.extend(child_words)
 
@@ -143,7 +145,7 @@ class FSA:
                     child_words = FSA.__words_with_wildcard(child_node,
                                                             wildcard,
                                                             index,
-                                                            current_word + child,
+                                                            current_word + [child],
                                                             with_count=with_count)
                     words.extend(child_words)
             elif node.eow and index == len(wildcard) - 1:
@@ -155,7 +157,7 @@ class FSA:
                 child_words = FSA.__words_with_wildcard(child_node,
                                                         wildcard,
                                                         index + 1,
-                                                        current_word + child_node.val,
+                                                        current_word + [child_node.val],
                                                         with_count=with_count)
                 words.extend(child_words)
 
@@ -191,7 +193,7 @@ class FSA:
                 #words.append(wildcard)
             return words
 
-        return FSA.__words_with_wildcard(self.root, wildcard, 0, self.root.val, with_count=with_count)
+        return FSA.__words_with_wildcard(self.root, wildcard, 0, [], with_count=with_count)
 
     def search_with_prefix(self, prefix, with_count=False):
         """
@@ -242,11 +244,13 @@ class FSA:
             raise IOError("File does not exists")
 
         if isinstance(source, str) or hasattr(source, 'read'):
-            source = gen_source(source)
+            source = [__class__.letter_regex.findall(word) for word in gen_source(source)]
+            source.sort()
 
         for word in source:
-            if type(word) == str:
+            if isinstance(word, list):
                 self.add(word)
+
 
     def get_word_count(self):
         """
@@ -263,7 +267,7 @@ class FSA:
         words = []
         for child in self.root.children:
             self._search_within_distance(word, self.root.children[child],
-                                         child, child, words,
+                                         child, [child], words,
                                          row, dist, with_count=with_count)
         return words
 
@@ -285,7 +289,7 @@ class FSA:
         if min(curr_row) <= dist:
             for child_node in node.children:
                 self._search_within_distance(word, node.children[child_node],
-                                             child_node, new_word+child_node,
+                                             child_node, new_word+[child_node],
                                              words, curr_row, dist,
                                              with_count=with_count)
 
